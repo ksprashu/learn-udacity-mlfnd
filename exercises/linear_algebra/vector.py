@@ -3,14 +3,18 @@ from decimal import Decimal, getcontext
 
 getcontext().prec = 15
 
-CANNOT_NORMALIZE_ZERO_MSG = 'Cannot normalize Zero vector'
-CANNOT_COMPUTE_ANGLE_ZERO_MSG = 'Cannot compute an angle with a Zero vector'
-NO_PARALLEL_COMPONENT_MSG = 'There is no parallel component of this projection'
-NO_ORTHOGONAL_COMPONENT_MSG = 'There is no orthogonal component'\
-    ' to this projection'
-
 
 class Vector(object):
+    CANNOT_NORMALIZE_ZERO_MSG = 'Cannot normalize Zero vector'
+    CANNOT_COMPUTE_ANGLE_ZERO_MSG = \
+        'Cannot compute an angle with a Zero vector'
+    NO_PARALLEL_COMPONENT_MSG = \
+        'There is no parallel component of this projection'
+    NO_ORTHOGONAL_COMPONENT_MSG = \
+        'There is no orthogonal component to this projection'
+    CROSS_ONLY_IN_2D_OR_3D = \
+        'Cross product is defined only in 2D or 3D'
+
     def __init__(self, coordinates):
         try:
             if not coordinates:
@@ -62,8 +66,8 @@ class Vector(object):
     def angle_with(self, v, in_degrees=False):
         try:
             radians = math.acos(self.normalized().dot(v.normalized()))
-            return round(radians, 3) if in_degrees is False \
-                else round(math.degrees(radians), 3)
+            return radians if in_degrees is False \
+                else math.degrees(radians)
 
         except Exception as e:
             if str(e) == self.CANNOT_NORMALIZE_ZERO_MSG:
@@ -106,14 +110,27 @@ class Vector(object):
                 raise e
 
     def cross(self, v):
-        x1, y1, z1 = self.coordinates
-        x2, y2, z2 = v.coordinates
+        try:
+            x1, y1, z1 = self.coordinates
+            x2, y2, z2 = v.coordinates
 
-        cross_x = y1*z2 - y2*z1
-        cross_y = Decimal("-1.0") * (x1*z2 - x2*z1)
-        cross_z = x1*y2 - x2*y1
+            cross_x = y1*z2 - y2*z1
+            cross_y = Decimal("-1.0") * (x1*z2 - x2*z1)
+            cross_z = x1*y2 - x2*y1
 
-        return Vector([cross_x, cross_y, cross_z])
+            return Vector([cross_x, cross_y, cross_z])
+
+        except ValueError as e:
+            msg = str(e)
+            if msg == 'not enough values to unpack (expected 3, got 2)':
+                self_3 = Vector(self.coordinates + ('0',))
+                v_3 = Vector(v.coordinates + ('0',))
+                return self_3.cross(v_3)
+            elif msg == 'too many values to unpack (expected 3)' or \
+                    msg == 'not enough values to unpack (expected 3, got 1)':
+                raise Exception(self.CROSS_ONLY_IN_2D_OR_3D)
+            else:
+                raise e
 
     def area_parallelogram(self, v):
         return self.cross(v).magnitude()
@@ -123,6 +140,10 @@ class Vector(object):
 
     __repr__ = __str__
 
+
+print("--------------------------")
+print("start of VECTOR operations")
+print("--------------------------")
 
 # Arithmetic Operations
 v = Vector([8.218, -9.341])
@@ -217,3 +238,31 @@ print(v.area_parallelogram(w))
 v = Vector([1.5, 9.547, 3.691])
 w = Vector([-6.007, 0.124, 5.772])
 print(v.area_triangle(w))
+
+v = Vector([8.462, 7.893])
+w = Vector([6.984, -5.975])
+print(v.cross(w))
+
+# this will throw an error
+# v = Vector([8.462])
+# w = Vector([6.984])
+# print(v.cross(w))
+
+# this will throw an error
+# v = Vector([8.462, 7.893, -8.187, 3.232])
+# w = Vector([6.984, -5.975, 4.778, -7.638])
+# print(v.cross(w))
+
+# debugging from plane exercises
+v = Vector([-0.412, 3.806, 0.728])
+w = Vector([1.03, -9.515, -1.82])
+print('Is parallel = {}'.format(v.is_parallel_to(w)))
+print('angle = {}'.format(v.angle_with(w)))
+
+
+print("--------------------------")
+print("end of VECTOR operations")
+print("--------------------------")
+print('\n')
+print('\n')
+print('\n')
